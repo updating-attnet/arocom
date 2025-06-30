@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asset Acquisition Application</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8 font-inter flex justify-center items-start">
+
+    <div id="appContainer" class="w-full flex justify-center items-start">
+    </div>
+
+    <div id="appModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeModalButton">&times;</span>
+            <h2 id="modalTitle" class="text-xl font-bold mb-4 text-gray-800"></h2>
+            <p id="modalMessage" class="text-gray-700"></p>
+            <p id="modalSubMessage" class="text-sm text-gray-500 mt-2"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        const { createClient } = window.supabase;
+
+        const SUPABASE_URL = 'https://icnwrapjvqakjwsgvbsu.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImljbndyYXBqdnFha2p3c2d2YnN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMDE5NzgsImV4cCI6MjA2Njc3Nzk3OH0.vCeAmBdOZZsph78csQ2EePyYvEETVxMt68VHxe_Bbr0';
+
+        let supabase;
+        let userId;
+
+        const ADMIN_EMAIL = "admin@example.com";
+        const ADMIN_PASSWORD = "adminpassword";
+
+        let appState = {
+            currentView: 'loading',
+            loggedInUser: null,
+            isAdmin: false,
+            formData: {
+                name: '',
+                mobileNumbers: '',
+                officeAPNumber: '',
+                ippisNumber: '',
+                employmentCode: '',
+                rank: '',
+                presentServicePoint: '',
+                tiePoint: '',
+                dateOfEnrolment: '',
+                serviceTerminalDate: '',
+                presentMonthlySalary: '',
+                previousFinancialCommitments: '',
+                netMonthlySalary: '',
+                productDetails: Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' }),
+                totalCostOfAssets: '',
+                monthlyRepayment: '',
+                status: 'pending',
+                applicantUid: '',
+                submissionDate: '',
+                applicantSignature: '',
+                applicationDate: ''
+            },
+            applications: []
+        };
+
+        function showModal(title, message, subMessage = '') {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            document.getElementById('modalSubMessage').textContent = subMessage;
+            document.getElementById('appModal').style.display = 'flex';
+        }
+
+        function hideModal() {
+            document.getElementById('appModal').style.display = 'none';
+        }
+
+        async function initializeSupabase() {
+            try {
+                supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+                supabase.auth.onAuthStateChange(async (event, session) => {
+                    if (session) {
+                        appState.loggedInUser = session.user;
+                        userId = session.user.id;
+                        appState.isAdmin = (session.user.email === ADMIN_EMAIL);
+                        console.log("User authenticated:", session.user.email, "Is Admin:", appState.isAdmin);
+
+                        if (appState.isAdmin) {
+                            appState.currentView = 'adminDashboard';
+                            await fetchApplications();
+                        } else {
+                            appState.currentView = 'applicantForm';
+                            await loadApplicantFormData();
+                        }
+                    } else {
+                        appState.loggedInUser = null;
+                        appState.isAdmin = false;
+                        appState.currentView = 'login';
+                        userId = null;
+                    }
+                    renderApp();
+                });
+
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    appState.currentView = 'login';
+                    renderApp();
+                }
+
+            } catch (error) {
+                console.error("Error initializing Supabase:", error);
+                showModal('Error', 'Failed to initialize application. Please try again later.', error.message);
+                appState.currentView = 'error';
+                renderApp();
+            }
+        }
+
+        function renderApp() {
+            const container = document.getElementById('appContainer');
+            container.innerHTML = '';
+
+            let contentHtml = '';
+
+            switch (appState.currentView) {
+                case 'loading':
+                    contentHtml = `
+                        <div class="flex flex-col items-center justify-center min-h-screen">
+                            <div class="loader"></div>
+                            <p class="mt-4 text-lg text-gray-700">Loading application...</p>
+                        </div>
+                    `;
+                    break;
+                case 'login':
+                case 'signup':
+                    contentHtml = renderAuthForm();
+                    break;
+                case 'applicantForm':
+                    contentHtml = renderApplicantForm();
+                    break;
+                case 'adminDashboard':
+                    contentHtml = renderAdminDashboard();
+                    break;
+                case 'adminLogin':
+                    contentHtml = renderAdminLoginForm();
+                    break;
+                case 'error':
+                    contentHtml = `
+                        <div class="flex flex-col items-center justify-center min-h-screen text-red-600">
+                            <h2 class="text-2xl font-bold">Application Error</h2>
+                            <p class="mt-2">Something went wrong. Please refresh the page.</p>
+                        </div>
+                    `;
+                    break;
+            }
+
+            container.innerHTML = contentHtml;
+            attachEventListenersForCurrentView();
+        }
+
+        function attachEventListenersForCurrentView() {
+            switch (appState.currentView) {
+                case 'login':
+                case 'signup':
+                    setupAuthFormListeners();
+                    break;
+                case 'applicantForm':
+                    setupApplicantFormListeners();
+                    break;
+                case 'adminDashboard':
+                    setupAdminDashboardListeners();
+                    break;
+                case 'adminLogin':
+                    setupAdminLoginFormListeners();
+                    break;
+            }
+        }
+
+        function setupAuthFormListeners() {
+            const authForm = document.getElementById('authForm');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const toggleAuthViewButton = document.getElementById('toggleAuthView');
+            const goToAdminLoginButton = document.getElementById('goToAdminLogin');
+
+            if (authForm) {
+                authForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = emailInput.value;
+                    const password = passwordInput.value;
+
+                    try {
+                        if (appState.currentView === 'login') {
+                            const { error } = await supabase.auth.signInWithPassword({ email, password });
+                            if (error) throw error;
+                            showModal('Success', 'Logged in successfully!', 'Redirecting to your application form.');
+                        } else {
+                            const { error } = await supabase.auth.signUp({ email, password });
+                            if (error) throw error;
+                            showModal('Success', 'Account created successfully!', 'Please check your email to confirm your account, then log in.');
+                        }
+                    } catch (error) {
+                        console.error("Authentication error:", error);
+                        showModal('Authentication Failed', 'Please check your email and password.', error.message);
+                    }
+                });
+            }
+
+            if (toggleAuthViewButton) {
+                toggleAuthViewButton.addEventListener('click', () => {
+                    appState.currentView = appState.currentView === 'login' ? 'signup' : 'login';
+                    renderApp();
+                });
+            }
+
+            if (goToAdminLoginButton) {
+                goToAdminLoginButton.addEventListener('click', () => {
+                    appState.currentView = 'adminLogin';
+                    renderApp();
+                });
+            }
+        }
+
+        function setupAdminLoginFormListeners() {
+            const adminLoginForm = document.getElementById('adminLoginForm');
+            const adminEmailInput = document.getElementById('adminEmail');
+            const adminPasswordInput = document.getElementById('adminPassword');
+            const goToApplicantLoginButton = document.getElementById('goToApplicantLogin');
+
+            if (adminLoginForm) {
+                adminLoginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = adminEmailInput.value;
+                    const password = adminPasswordInput.value;
+
+                    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+                        try {
+                            const { error } = await supabase.auth.signInWithPassword({ email, password });
+                            if (error) throw error;
+                            showModal('Success', 'Admin Login Successful!', 'Redirecting to admin dashboard.');
+                        } catch (error) {
+                            console.error("Admin login error:", error);
+                            showModal('Login Failed', 'Could not log in as admin. Please check credentials.', error.message);
+                        }
+                    } else {
+                        showModal('Login Failed', 'Invalid admin credentials.');
+                    }
+                });
+            }
+
+            if (goToApplicantLoginButton) {
+                goToApplicantLoginButton.addEventListener('click', () => {
+                    appState.currentView = 'login';
+                    renderApp();
+                });
+            }
+        }
+
+        function setupApplicantFormListeners() {
+            const interestForm = document.getElementById('interestForm');
+            const signOutButton = document.getElementById('signOutButton');
+
+            if (interestForm) {
+                const formElements = interestForm.querySelectorAll('input, textarea');
+                formElements.forEach(element => {
+                    if (!element.dataset.field) {
+                        element.addEventListener('input', handleChange);
+                    }
+                });
+
+                interestForm.addEventListener('submit', handleSubmit);
+            }
+
+            if (signOutButton) {
+                signOutButton.addEventListener('click', signOutUser);
+            }
+
+            renderProductDetails();
+            updateTotal();
+        }
+
+        function setupAdminDashboardListeners() {
+            const signOutButton = document.getElementById('signOutButton');
+
+            if (signOutButton) {
+                signOutButton.addEventListener('click', signOutUser);
+            }
+
+            renderApplications();
+        }
+
+        function renderAuthForm() {
+            const isLogin = appState.currentView === 'login';
+            return `
+                <div class="bg-white shadow-lg rounded-lg p-6 sm:p-8 max-w-md w-full my-8 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-center text-blue-700 mb-6">
+                        ${isLogin ? 'Applicant Login' : 'Applicant Signup'}
+                    </h2>
+                    <form id="authForm" class="space-y-4">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email:</label>
+                            <input type="email" id="email" name="email" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required />
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password:</label>
+                            <input type="password" id="password" name="password" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required />
+                        </div>
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
+                            ${isLogin ? 'Login' : 'Signup'}
+                        </button>
+                    </form>
+                    <div class="mt-4 text-center">
+                        <button id="toggleAuthView" class="text-blue-600 hover:underline text-sm">
+                            ${isLogin ? 'Need an account? Sign Up' : 'Already have an account? Login'}
+                        </button>
+                        <button id="goToAdminLogin" class="block mt-2 text-blue-600 hover:underline text-sm mx-auto">
+                            Admin Login
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAdminLoginForm() {
+            return `
+                <div class="bg-white shadow-lg rounded-lg p-6 sm:p-8 max-w-md w-full my-8 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-center text-blue-700 mb-6">Admin Login</h2>
+                    <form id="adminLoginForm" class="space-y-4">
+                        <div>
+                            <label for="adminEmail" class="block text-sm font-medium text-gray-700 mb-1">Email:</label>
+                            <input type="email" id="adminEmail" name="adminEmail" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required />
+                        </div>
+                        <div>
+                            <label for="adminPassword" class="block text-sm font-medium text-gray-700 mb-1">Password:</label>
+                            <input type="password" id="adminPassword" name="adminPassword" class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" required />
+                        </div>
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
+                            Login as Admin
+                        </button>
+                    </form>
+                    <div class="mt-4 text-center">
+                        <button id="goToApplicantLogin" class="text-blue-600 hover:underline text-sm">
+                            Applicant Login
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderApplicantForm() {
+            return `
+                <div class="bg-white shadow-lg rounded-lg p-6 sm:p-8 lg:p-10 max-w-4xl w-full my-8 border border-gray-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h1 class="text-xl sm:text-2xl font-bold text-gray-800 uppercase">AROCOM GLOBAL MERCHANDISE LIMITED</h1>
+                        <button id="signOutButton" class="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700">Sign Out</button>
+                    </div>
+                    <p class="text-md sm:text-lg text-gray-600 mb-2">ASSET ACQUISITION SCHEME FOR POLICE OFFICERS</p>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-blue-700 mt-6 mb-4 text-center">EXPRESSION OF INTEREST FORM</h2>
+
+                    <form id="interestForm" class="space-y-8">
+                        <div class="border border-gray-300 rounded-lg p-4 sm:p-6">
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-700 mb-4">PART A: PERSONAL INFORMATION</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                                <div class="flex flex-col items-center justify-center border border-dashed border-gray-400 rounded-md p-4 h-40 sm:h-48 bg-gray-50 text-gray-500">
+                                    <p class="text-sm text-center">Affix your most recent passport photograph here</p>
+                                    <div class="mt-2 text-xs">(Click to upload)</div>
+                                    <input type="file" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-3">
+                                    <div class="flex flex-col">
+                                        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name:</label>
+                                        <input type="text" id="name" name="name" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="mobileNumbers" class="block text-sm font-medium text-gray-700 mb-1">Mobile Number(s):</label>
+                                        <input type="text" id="mobileNumbers" name="mobileNumbers" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="officeAPNumber" class="block text-sm font-medium text-gray-700 mb-1">Office/AP Number:</label>
+                                        <input type="text" id="officeAPNumber" name="officeAPNumber" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="ippisNumber" class="block text-sm font-medium text-gray-700 mb-1">IPPIS Number:</label>
+                                        <input type="text" id="ippisNumber" name="ippisNumber" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="employmentCode" class="block text-sm font-medium text-gray-700 mb-1">Employment Code:</label>
+                                        <input type="text" id="employmentCode" name="employmentCode" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="rank" class="block text-sm font-medium text-gray-700 mb-1">Rank:</label>
+                                        <input type="text" id="rank" name="rank" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                </div>
+
+                                <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-4">
+                                    <div class="flex flex-col">
+                                        <label for="presentServicePoint" class="block text-sm font-medium text-gray-700 mb-1">Present Service Point:</label>
+                                        <input type="text" id="presentServicePoint" name="presentServicePoint" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="tiePoint" class="block text-sm font-medium text-gray-700 mb-1">Tie Point:</label>
+                                        <input type="text" id="tiePoint" name="tiePoint" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="dateOfEnrolment" class="block text-sm font-medium text-gray-700 mb-1">Date of Enrolment:</label>
+                                        <input type="date" id="dateOfEnrolment" name="dateOfEnrolment" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="serviceTerminalDate" class="block text-sm font-medium text-gray-700 mb-1">Service Terminal Date:</label>
+                                        <input type="date" id="serviceTerminalDate" name="serviceTerminalDate" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                </div>
+
+                                <div class="md:col-span-2 space-y-4 mt-4">
+                                    <div class="flex flex-col">
+                                        <label for="presentMonthlySalary" class="block text-sm font-medium text-gray-700 mb-1">Present Monthly Salary:</label>
+                                        <input type="number" id="presentMonthlySalary" name="presentMonthlySalary" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="previousFinancialCommitments" class="block text-sm font-medium text-gray-700 mb-1">State details of previous financial commitment(s) and credit facility(s) obtained that you are still paying:</label>
+                                        <textarea id="previousFinancialCommitments" name="previousFinancialCommitments" rows="3" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="e.g., Car loan, house mortgage, etc."></textarea>
+                                    </div>
+                                    <div class="flex flex-col">
+                                        <label for="netMonthlySalary" class="block text-sm font-medium text-gray-700 mb-1">Net monthly salary:</label>
+                                        <input type="number" id="netMonthlySalary" name="netMonthlySalary" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    </div>
+                                    <p class="text-xs text-gray-500 italic">
+                                        (Note role that you cannot acquire asset(s) that the monthly repayment will be more than one-third of your net monthly salary)
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border border-gray-300 rounded-lg p-4 sm:p-6">
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-700 mb-4">PART B: PRODUCT DETAILS</h3>
+                            <p class="text-sm text-gray-600 mb-4">
+                                State details including type(s) and brand(s) of the asset(s) demanded with the eighteen (18) months installment price(s) and the amount of monthly repayment as stated in the price lists.
+                                <br />
+                                <span class="italic">(Ensure you check our price lists carefully in the process of filling your request)</span>
+                            </p>
+
+                            <div class="overflow-x-auto mb-6">
+                                <table class="min-w-full bg-white border border-gray-200 rounded-md">
+                                    <thead>
+                                        <tr class="bg-gray-100 text-gray-700 text-left text-sm">
+                                            <th class="py-2 px-3 border-b border-gray-200">S/N</th>
+                                            <th class="py-2 px-3 border-b border-gray-200">DETAILS OF PRODUCT(S)</th>
+                                            <th class="py-2 px-3 border-b border-gray-200">ESTIMATED MONTHLY PAYMENT (N)</th>
+                                            <th class="py-2 px-3 border-b border-gray-200">MONTHLY PAYMENT (N)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="productDetailsTableBody">
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="bg-gray-50">
+                                            <td colspan="2" class="py-2 px-3 text-right font-semibold text-gray-700 text-sm">TOTAL (N)</td>
+                                            <td colspan="2" class="py-2 px-3 border-t border-gray-200">
+                                                <input type="number" id="totalMonthlyPayment" class="w-full p-1 border border-gray-300 rounded-md text-sm font-semibold focus:ring-blue-500 focus:border-blue-500" placeholder="Total" readonly />
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div class="flex flex-col">
+                                    <label for="totalCostOfAssets" class="block text-sm font-medium text-gray-700 mb-1">Total cost of asset(s) demanded: (Amount in words)</label>
+                                    <input type="text" id="totalCostOfAssets" name="totalCostOfAssets" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                </div>
+                                <div class="flex flex-col">
+                                    <label for="monthlyRepayment" class="block text-sm font-medium text-gray-700 mb-1">Monthly Repayment: (Amount in words)</label>
+                                    <input type="text" id="monthlyRepayment" name="monthlyRepayment" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border border-gray-300 rounded-lg p-4 sm:p-6">
+                            <h3 class="text-lg sm:text-xl font-semibold text-gray-700 mb-4">PART C: DECLARATION BY APPLICANT</h3>
+                            <p class="text-sm text-gray-700 mb-4 leading-relaxed">
+                                I, <span class="inline-block border-b border-gray-400 w-40" id="applicantNameDeclaration"></span> hereby declare that the information given above are true and very correct to the best of my knowledge and understanding.
+                            </p>
+                            <p class="text-sm text-gray-700 mb-4 leading-relaxed">
+                                I wish to confirm my readiness to collect the afore-stated asset(s) at the above quoted price(s) on delivery and humbly mandate the Officers in-charge of payment of my salaries (Mechanized Salary Section) to effect monthly deduction of the above sum for eighteen (18) months period of the facility and pay <span class="font-bold">AROCOM GLOBAL MERCHANDISE LIMITED</span> or its designated bank account on the day of paying my salary.
+                            </p>
+                            <p class="text-sm text-gray-700 mb-4 leading-relaxed">
+                                I wish to state further that in-case of an unforeseen circumstances in the course of deduction of the monthly repayment from my salary before the terminal period of the facility, the balance of the facility would be charged to my next of kin/estate.
+                            </p>
+                            <p class="text-sm text-gray-700 mb-6 leading-relaxed">
+                                I hereby state that the afore-stated instructions are given by me irrevocably and without the right of set-off of the instruction after collecting the asset(s) demanded.
+                            </p>
+
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 space-y-4 sm:space-y-0">
+                                <div class="flex-1 mr-0 sm:mr-4 w-full">
+                                    <label for="applicantSignature" class="block text-sm font-medium text-gray-700 mb-1">Applicant's Signature:</label>
+                                    <input type="text" id="applicantSignature" name="applicantSignature" class="w-full p-2 border-b-2 border-gray-400 focus:border-blue-500 focus:outline-none text-sm" placeholder="Digital Signature Area" />
+                                </div>
+                                <div class="flex-1 w-full">
+                                    <label for="applicationDate" class="block text-sm font-medium text-gray-700 mb-1">Date:</label>
+                                    <input type="date" id="applicationDate" name="applicationDate" class="w-full p-2 border-b-2 border-gray-400 focus:border-blue-500 focus:outline-none text-sm" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center mt-8">
+                            <button type="submit" class="px-8 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 ease-in-out">
+                                Submit Application
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        function renderAdminDashboard() {
+            return `
+                <div class="bg-white shadow-lg rounded-lg p-6 sm:p-8 lg:p-10 max-w-4xl w-full my-8 border border-gray-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl sm:text-3xl font-extrabold text-blue-700">Admin Dashboard</h2>
+                        <button id="signOutButton" class="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700">Sign Out</button>
+                    </div>
+                    <p class="text-gray-600 mb-6">Review and manage submitted applications.</p>
+
+                    <div class="overflow-x-auto mb-6">
+                        <table class="min-w-full bg-white border border-gray-200 rounded-md">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-700 text-left text-sm">
+                                    <th class="py-2 px-3 border-b border-gray-200">Applicant Name</th>
+                                    <th class="py-2 px-3 border-b border-gray-200">Submission Date</th>
+                                    <th class="py-2 px-3 border-b border-gray-200">Total Cost</th>
+                                    <th class="py-2 px-3 border-b border-gray-200">Status</th>
+                                    <th class="py-2 px-3 border-b border-gray-200">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="applicationsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadApplicantFormData() {
+            if (!supabase || !userId) {
+                console.error("Supabase or User ID not available. Cannot load data.");
+                return;
+            }
+            try {
+                const { data, error } = await supabase
+                    .from('applications')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .single();
+
+                if (error && error.code !== 'PGRST116') {
+                    throw error;
+                }
+
+                if (data) {
+                    appState.formData = {
+                        name: data.name || '',
+                        mobileNumbers: data.mobile_numbers || '',
+                        officeAPNumber: data.office_ap_number || '',
+                        ippisNumber: data.ippis_number || '',
+                        employmentCode: data.employment_code || '',
+                        rank: data.rank || '',
+                        presentServicePoint: data.present_service_point || '',
+                        tiePoint: data.tie_point || '',
+                        dateOfEnrolment: data.date_of_enrolment || '',
+                        serviceTerminalDate: data.service_terminal_date || '',
+                        presentMonthlySalary: data.present_monthly_salary || null,
+                        previousFinancialCommitments: data.previous_financial_commitments || '',
+                        netMonthlySalary: data.net_monthly_salary || null,
+                        productDetails: data.product_details || Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' }),
+                        totalCostOfAssets: data.total_cost_of_assets || null,
+                        monthlyRepayment: data.monthly_repayment || null,
+                        status: data.status || 'pending',
+                        applicantUid: data.user_id,
+                        submissionDate: data.created_at ? new Date(data.created_at).toISOString() : '',
+                        applicantSignature: data.applicant_signature || '',
+                        applicationDate: data.application_date || ''
+                    };
+                    console.log("Form data loaded:", appState.formData);
+                    updateFormFields();
+                    renderProductDetails();
+                    updateTotal();
+                } else {
+                    console.log("No existing form data found for this applicant.");
+                    appState.formData = {
+                        name: '', mobileNumbers: '', officeAPNumber: '', ippisNumber: '', employmentCode: '', rank: '',
+                        presentServicePoint: '', tiePoint: '', dateOfEnrolment: '', serviceTerminalDate: '',
+                        presentMonthlySalary: '', previousFinancialCommitments: '', netMonthlySalary: '',
+                        productDetails: Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' }),
+                        totalCostOfAssets: '', monthlyRepayment: '', status: 'pending', applicantUid: userId, submissionDate: '',
+                        applicantSignature: '', applicationDate: ''
+                    };
+                    updateFormFields();
+                    renderProductDetails();
+                    updateTotal();
+                }
+            } catch (e) {
+                console.error("Error loading document: ", e);
+                showModal('Error', 'Failed to load your application data.', e.message);
+            }
+        }
+
+        function updateFormFields() {
+            for (const key in appState.formData) {
+                const element = document.getElementById(key);
+                if (element) {
+                    if (key === 'productDetails') {
+                        continue;
+                    }
+                    element.value = appState.formData[key];
+                }
+            }
+            const applicantNameDeclaration = document.getElementById('applicantNameDeclaration');
+            if (applicantNameDeclaration) {
+                applicantNameDeclaration.textContent = appState.formData.name || '';
+            }
+        }
+
+        function renderProductDetails() {
+            const productDetailsTableBody = document.getElementById('productDetailsTableBody');
+            if (!productDetailsTableBody) return;
+
+            productDetailsTableBody.innerHTML = '';
+
+            const productDetailsArray = Array.isArray(appState.formData.productDetails)
+                ? appState.formData.productDetails
+                : Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' });
+
+            productDetailsArray.forEach((product, index) => {
+                const row = productDetailsTableBody.insertRow();
+                row.className = 'hover:bg-gray-50';
+
+                const snCell = row.insertCell();
+                snCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
+                snCell.textContent = index + 1;
+
+                const detailsCell = row.insertCell();
+                detailsCell.className = 'py-2 px-3 border-b border-gray-200';
+                const detailsInput = document.createElement('input');
+                detailsInput.type = 'text';
+                detailsInput.className = 'w-full p-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500';
+                detailsInput.value = product.details || '';
+                detailsInput.dataset.index = index;
+                detailsInput.dataset.field = 'details';
+                detailsInput.addEventListener('input', handleProductChange);
+                detailsCell.appendChild(detailsInput);
+
+                const estimatedMonthlyPaymentCell = row.insertCell();
+                estimatedMonthlyPaymentCell.className = 'py-2 px-3 border-b border-gray-200';
+                const estimatedMonthlyPaymentInput = document.createElement('input');
+                estimatedMonthlyPaymentInput.type = 'number';
+                estimatedMonthlyPaymentInput.className = 'w-full p-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500';
+                estimatedMonthlyPaymentInput.value = product.estimatedMonthlyPayment || '';
+                estimatedMonthlyPaymentInput.dataset.index = index;
+                estimatedMonthlyPaymentInput.dataset.field = 'estimatedMonthlyPayment';
+                estimatedMonthlyPaymentInput.addEventListener('input', handleProductChange);
+                estimatedMonthlyPaymentCell.appendChild(estimatedMonthlyPaymentInput);
+
+                const monthlyPaymentCell = row.insertCell();
+                monthlyPaymentCell.className = 'py-2 px-3 border-b border-gray-200';
+                const monthlyPaymentInput = document.createElement('input');
+                monthlyPaymentInput.type = 'number';
+                monthlyPaymentInput.className = 'w-full p-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500';
+                monthlyPaymentInput.value = product.monthlyPayment || '';
+                monthlyPaymentInput.dataset.index = index;
+                monthlyPaymentInput.dataset.field = 'monthlyPayment';
+                monthlyPaymentInput.addEventListener('input', handleProductChange);
+                monthlyPaymentCell.appendChild(monthlyPaymentInput);
+            });
+        }
+
+        function updateTotal() {
+            const totalMonthlyPaymentInput = document.getElementById('totalMonthlyPayment');
+            if (!totalMonthlyPaymentInput) return;
+
+            const total = (Array.isArray(appState.formData.productDetails) ? appState.formData.productDetails : []).reduce((sum, product) => {
+                const monthlyPayment = parseFloat(product.monthlyPayment) || 0;
+                return sum + monthlyPayment;
+            }, 0);
+            totalMonthlyPaymentInput.value = total.toFixed(2);
+        }
+
+        function handleChange(e) {
+            const { name, value } = e.target;
+            appState.formData[name] = value;
+
+            if (name === 'name') {
+                const applicantNameDeclaration = document.getElementById('applicantNameDeclaration');
+                if (applicantNameDeclaration) {
+                    applicantNameDeclaration.textContent = value;
+                }
+            }
+            saveApplicantFormData();
+        }
+
+        function handleProductChange(e) {
+            const { dataset, value } = e.target;
+            const index = parseInt(dataset.index);
+            const field = dataset.field;
+
+            if (!Array.isArray(appState.formData.productDetails)) {
+                appState.formData.productDetails = Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' });
+            }
+
+            const newProductDetails = [...appState.formData.productDetails];
+            newProductDetails[index] = {
+                ...newProductDetails[index],
+                [field]: value,
+            };
+            appState.formData.productDetails = newProductDetails;
+
+            updateTotal();
+            saveApplicantFormData();
+        }
+
+        async function saveApplicantFormData() {
+            if (!supabase || !userId) {
+                console.error("Supabase or User ID not available. Cannot save data.");
+                return;
+            }
+            try {
+                const dataToSave = {
+                    user_id: userId,
+                    status: appState.formData.status,
+                    name: appState.formData.name,
+                    mobile_numbers: appState.formData.mobileNumbers,
+                    office_ap_number: appState.formData.officeAPNumber,
+                    ippis_number: appState.formData.ippisNumber,
+                    employment_code: appState.formData.employmentCode,
+                    rank: appState.formData.rank,
+                    present_service_point: appState.formData.presentServicePoint,
+                    tie_point: appState.formData.tiePoint,
+                    date_of_enrolment: appState.formData.dateOfEnrolment,
+                    service_terminal_date: appState.formData.serviceTerminalDate,
+                    present_monthly_salary: parseFloat(appState.formData.presentMonthlySalary) || null,
+                    previous_financial_commitments: appState.formData.previousFinancialCommitments,
+                    net_monthly_salary: parseFloat(appState.formData.netMonthlySalary) || null,
+                    product_details: appState.formData.productDetails,
+                    total_cost_of_assets: parseFloat(appState.formData.totalCostOfAssets) || null,
+                    monthly_repayment: parseFloat(appState.formData.monthlyRepayment) || null,
+                    applicant_signature: appState.formData.applicantSignature,
+                    application_date: appState.formData.applicationDate
+                };
+
+                const { data: updateData, error: updateError } = await supabase
+                    .from('applications')
+                    .update(dataToSave)
+                    .eq('user_id', userId);
+
+                if (updateError && updateData === null) {
+                    console.log("No existing record found for user_id, attempting to insert.");
+                    const { data: insertData, error: insertError } = await supabase
+                        .from('applications')
+                        .insert(dataToSave);
+                    if (insertError) throw insertError;
+                    console.log("Form data inserted successfully!");
+                } else if (updateError) {
+                    throw updateError;
+                } else {
+                    console.log("Form data updated successfully!");
+                }
+            } catch (e) {
+                console.error("Error saving document: ", e);
+                showModal('Error', 'Failed to save your application data.', e.message);
+            }
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            console.log('Form Data Submitted:', appState.formData);
+            await saveApplicantFormData();
+            showModal('Form Submitted!', 'Your application has been received. Thank you!', 'Check the browser console for the submitted form data (for demonstration purposes).');
+        }
+
+        async function fetchApplications() {
+            if (!supabase) {
+                console.error("Supabase not available. Cannot fetch applications.");
+                return;
+            }
+            try {
+                const { data, error } = await supabase
+                    .from('applications')
+                    .select('*');
+
+                if (error) throw error;
+
+                appState.applications = data;
+                console.log("Applications fetched for admin:", appState.applications);
+                if (appState.currentView === 'adminDashboard') {
+                    renderApp();
+                }
+            } catch (error) {
+                console.error("Error fetching applications:", error);
+                showModal('Error', 'Failed to fetch applications.', error.message);
+            }
+        }
+
+        function renderApplications() {
+            const applicationsTableBody = document.getElementById('applicationsTableBody');
+            if (!applicationsTableBody) return;
+
+            applicationsTableBody.innerHTML = '';
+            if (appState.applications.length === 0) {
+                applicationsTableBody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-gray-500">No applications found.</td></tr>';
+                return;
+            }
+
+            appState.applications.forEach(app => {
+                const row = applicationsTableBody.insertRow();
+                row.className = 'hover:bg-gray-50';
+
+                const nameCell = row.insertCell();
+                nameCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
+                nameCell.textContent = app.name || 'N/A';
+
+                const dateCell = row.insertCell();
+                dateCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
+                const displayDate = app.application_date || app.created_at;
+                dateCell.textContent = displayDate ? new Date(displayDate).toLocaleDateString() : 'N/A';
+
+                const totalCostCell = row.insertCell();
+                totalCostCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
+                totalCostCell.textContent = app.total_cost_of_assets || 'N/A';
+
+                const statusCell = row.insertCell();
+                statusCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
+                statusCell.innerHTML = `<span class="px-2 py-1 rounded-full text-xs font-semibold ${app.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${app.status ? app.status.toUpperCase() : 'N/A'}</span>`;
+
+                const actionsCell = row.insertCell();
+                actionsCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
+                if (app.status === 'pending') {
+                    const approveButton = document.createElement('button');
+                    approveButton.textContent = 'Approve';
+                    approveButton.className = 'px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs mr-2';
+                    approveButton.addEventListener('click', () => updateApplicationStatus(app.user_id, 'approved'));
+                    actionsCell.appendChild(approveButton);
+                } else {
+                    actionsCell.textContent = 'No actions';
+                    actionsCell.className += ' text-gray-500 italic';
+                }
+            });
+        }
+
+        async function updateApplicationStatus(applicantUid, newStatus) {
+            if (!supabase) {
+                console.error("Supabase not available.");
+                return;
+            }
+            try {
+                const { data, error } = await supabase
+                    .from('applications')
+                    .update({ status: newStatus })
+                    .eq('user_id', applicantUid);
+
+                if (error) throw error;
+                showModal('Success', `Application for ${applicantUid} ${newStatus}!`);
+                await fetchApplications();
+            } catch (error) {
+                console.error("Error updating application status:", error);
+                showModal('Error', 'Failed to update application status.', error.message);
+            }
+        }
+
+        async function signOutUser() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                showModal('Signed Out', 'You have been successfully signed out.', 'Redirecting to login page.');
+            } catch (error) {
+                console.error("Error signing out:", error);
+                showModal('Error', 'Failed to sign out.', error.message);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('closeModalButton').addEventListener('click', hideModal);
+            document.getElementById('appModal').addEventListener('click', (e) => {
+                if (e.target.id === 'appModal') {
+                    hideModal();
+                }
+            });
+
+            initializeSupabase();
+            renderApp();
+        });
+    </script>
+</body>
+</html>
