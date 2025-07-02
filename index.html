@@ -88,8 +88,37 @@
         let supabase;
         let userId;
 
-        const ADMIN_EMAIL = "admin@example.com";
-        const ADMIN_PASSWORD = "adminpassword";
+        const ADMIN_EMAIL = "admin@aro.co";
+        const ADMIN_PASSWORD = "ArocomRash";
+
+        // Product data extracted from the provided image
+        const PRODUCTS = [
+            { id: 'HTR-134MBS', category: 'Refrigerator', name: '1 DOOR DCOOL HR-134MBS R6 SLV', cashPrice: 206064, installment18Months: 298793, monthlyRepayment: 16600 },
+            { id: 'HTR-185CS', category: 'Refrigerator', name: '1 DOOR DCOOL HR-185CS R6 SLV', cashPrice: 355418, installment18Months: 515356, monthlyRepayment: 28631 },
+            { id: 'HTR-80BEX', category: 'Refrigerator', name: '2 DOOR DCOOL 80BEX R6 SLV', cashPrice: 265424, installment18Months: 384865, monthlyRepayment: 21381 },
+            { id: 'HTR-160BEX', category: 'Refrigerator', name: 'T MOUNT DD HRF-160 BEX R6 SLV', cashPrice: 354358, installment18Months: 513820, monthlyRepayment: 28546 },
+            { id: 'HTR-250BLUX', category: 'Refrigerator', name: 'T MOUNT DD HRF-250 BLUX R6 SLV', cashPrice: 516220, installment18Months: 748519, monthlyRepayment: 41584 },
+            { id: 'HTR-355BLUX', category: 'Refrigerator', name: 'T MOUNT DD HRF-355 BLUX R6 SLV', cashPrice: 674054, installment18Months: 977378, monthlyRepayment: 54299 },
+
+            { id: 'HTF-150HAS', category: 'Freezer', name: 'CHEST SML HTF-150HAS R6 SLV', cashPrice: 351602, installment18Months: 509823, monthlyRepayment: 28324 },
+            { id: 'HTF-200R6WHT', category: 'Freezer', name: 'CHEST SML HTF-200 R6 WHT', cashPrice: 372378, installment18Months: 539948, monthlyRepayment: 29997 },
+            { id: 'HTF-200HAS', category: 'Freezer', name: 'CHEST SML HTF-200HAS R6 SLV', cashPrice: 396546, installment18Months: 574992, monthlyRepayment: 31944 },
+            { id: 'HTF-719HB', category: 'Freezer', name: 'CHEST LRG HTF-719HB R290 WHT', cashPrice: 1301362, installment18Months: 1886975, monthlyRepayment: 104832 },
+            { id: 'HTF-219IW', category: 'Freezer', name: 'CHEST MED HTF-219IW R6 WHT', cashPrice: 473078, installment18Months: 685963, monthlyRepayment: 38109 },
+            { id: 'HTF-219IS', category: 'Freezer', name: 'CHEST MED HTF-219IS R6 SLV', cashPrice: 489296, installment18Months: 709479, monthlyRepayment: 39416 },
+            { id: 'HTF-319IW', category: 'Freezer', name: 'CHEST MED HTF-319IW R6 WHT', cashPrice: 605790, installment18Months: 878396, monthlyRepayment: 48800 },
+            { id: 'HTF-219TS', category: 'Freezer', name: 'CHEST MED HTF-219TS R6 SLV', cashPrice: 591268, installment18Months: 857339, monthlyRepayment: 47630 },
+            { id: 'HTF-319TS', category: 'Freezer', name: 'CHEST MED HTF-319TS R6 SLV', cashPrice: 732990, installment18Months: 1062835, monthlyRepayment: 59046 },
+            { id: 'HTF-429IS', category: 'Freezer', name: 'CHEST MED HTF-429IS R6 SLV', cashPrice: 999262, installment18Months: 1448930, monthlyRepayment: 80496 },
+
+            { id: 'TG-JUR1500MS', category: 'Generator', name: 'TEC GEN PTR SML JUR 1500MS 1.25KVA/1.0KW', cashPrice: 76320, installment18Months: 110664, monthlyRepayment: 6148 },
+            { id: 'TG-BOBO2800MS', category: 'Generator', name: 'TEC GEN PTR SML BOBO 2800MS 2.5KVA/2.0KW', cashPrice: 370046, installment18Months: 536567, monthlyRepayment: 29809 },
+            { id: 'TG-BOBO2800ES', category: 'Generator', name: 'TEC GEN PTR SML BOBO 2800ES 2.5KVA/2.0KW', cashPrice: 444776, installment18Months: 644926, monthlyRepayment: 35829 },
+            { id: 'TG-HSTL4000ES', category: 'Generator', name: 'TEC GEN PTR MED HSTL 4000ES 3.75KVA/3.0KW', cashPrice: 475940, installment18Months: 690113, monthlyRepayment: 38340 },
+            { id: 'TG-OPT2800ES', category: 'Generator', name: 'TEC GEN PTR SML OPT 2800ES 2.5KVA/2.0KW', cashPrice: 461842, installment18Months: 669671, monthlyRepayment: 37204 },
+            { id: 'TG-OGA7500ES', category: 'Generator', name: 'TEC GEN PTR LRG OGA7500ES 6.25KVA/5.0KW', cashPrice: 907360, installment18Months: 1315672, monthlyRepayment: 73093 },
+            { id: 'TG-JNR1500MS', category: 'Generator', name: 'TEC GEN PTR SML JNR 1500MS 1.25KVA/1.0KW', cashPrice: 246450, installment18Months: 357353, monthlyRepayment: 19853 }
+        ];
 
         let appState = {
             currentView: 'loading',
@@ -109,18 +138,20 @@
                 presentMonthlySalary: '',
                 previousFinancialCommitments: '',
                 netMonthlySalary: '',
-                productDetails: Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' }),
+                productSelections: [{ productId: '', details: '', estimatedMonthlyPayment: 0, monthlyPayment: 0 }],
                 totalCostOfAssets: '',
                 monthlyRepayment: '',
                 status: 'pending',
                 applicantUid: '',
                 submissionDate: '',
                 applicantSignature: '',
-                applicationDate: ''
+                applicationDate: '',
+                passportPhotoUrl: ''
             },
             applications: []
         };
 
+        // Function to display a modal message
         function showModal(title, message, subMessage = '') {
             document.getElementById('modalTitle').textContent = title;
             document.getElementById('modalMessage').textContent = message;
@@ -128,10 +159,12 @@
             document.getElementById('appModal').style.display = 'flex';
         }
 
+        // Function to hide the modal message
         function hideModal() {
             document.getElementById('appModal').style.display = 'none';
         }
 
+        // Initialize Supabase client and set up authentication listener
         async function initializeSupabase() {
             try {
                 supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -159,6 +192,7 @@
                     renderApp();
                 });
 
+                // Check for existing session on load
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
                     appState.currentView = 'login';
@@ -173,6 +207,7 @@
             }
         }
 
+        // Renders the main application view based on appState.currentView
         function renderApp() {
             const container = document.getElementById('appContainer');
             container.innerHTML = '';
@@ -215,6 +250,7 @@
             attachEventListenersForCurrentView();
         }
 
+        // Attaches event listeners relevant to the current view
         function attachEventListenersForCurrentView() {
             switch (appState.currentView) {
                 case 'login':
@@ -233,6 +269,7 @@
             }
         }
 
+        // Sets up event listeners for the authentication form (login/signup)
         function setupAuthFormListeners() {
             const authForm = document.getElementById('authForm');
             const emailInput = document.getElementById('email');
@@ -278,6 +315,7 @@
             }
         }
 
+        // Sets up event listeners for the admin login form
         function setupAdminLoginFormListeners() {
             const adminLoginForm = document.getElementById('adminLoginForm');
             const adminEmailInput = document.getElementById('adminEmail');
@@ -313,16 +351,19 @@
             }
         }
 
+        // Sets up event listeners for the applicant form
         function setupApplicantFormListeners() {
             const interestForm = document.getElementById('interestForm');
             const signOutButton = document.getElementById('signOutButton');
+            const addProductButton = document.getElementById('addProductButton');
+            const passportPhotoInput = document.getElementById('passportPhotoInput');
+
 
             if (interestForm) {
-                const formElements = interestForm.querySelectorAll('input, textarea');
+                // Add event listeners for general form fields
+                const formElements = interestForm.querySelectorAll('input:not([data-field]), textarea');
                 formElements.forEach(element => {
-                    if (!element.dataset.field) {
-                        element.addEventListener('input', handleChange);
-                    }
+                    element.addEventListener('input', handleChange);
                 });
 
                 interestForm.addEventListener('submit', handleSubmit);
@@ -332,10 +373,24 @@
                 signOutButton.addEventListener('click', signOutUser);
             }
 
+            if (addProductButton) {
+                addProductButton.addEventListener('click', addProductSelectionRow);
+            }
+
+            if (passportPhotoInput) {
+                passportPhotoInput.addEventListener('change', handlePassportPhotoUpload);
+            }
+
             renderProductDetails();
             updateTotal();
+            // Ensure the name declaration is updated on load
+            const applicantNameDeclaration = document.getElementById('applicantNameDeclaration');
+            if (applicantNameDeclaration) {
+                applicantNameDeclaration.textContent = appState.formData.name || '';
+            }
         }
 
+        // Sets up event listeners for the admin dashboard
         function setupAdminDashboardListeners() {
             const signOutButton = document.getElementById('signOutButton');
 
@@ -346,6 +401,7 @@
             renderApplications();
         }
 
+        // Renders the authentication form (login or signup)
         function renderAuthForm() {
             const isLogin = appState.currentView === 'login';
             return `
@@ -378,6 +434,7 @@
             `;
         }
 
+        // Renders the admin login form
         function renderAdminLoginForm() {
             return `
                 <div class="bg-white shadow-lg rounded-lg p-6 sm:p-8 max-w-md w-full my-8 border border-gray-200">
@@ -404,7 +461,9 @@
             `;
         }
 
+        // Renders the applicant interest form
         function renderApplicantForm() {
+            const passportPhotoSrc = appState.formData.passportPhotoUrl || 'https://placehold.co/150x150/e0e0e0/555555?text=Passport+Photo';
             return `
                 <div class="bg-white shadow-lg rounded-lg p-6 sm:p-8 lg:p-10 max-w-4xl w-full my-8 border border-gray-200">
                     <div class="flex justify-between items-center mb-4">
@@ -418,62 +477,63 @@
                         <div class="border border-gray-300 rounded-lg p-4 sm:p-6">
                             <h3 class="text-lg sm:text-xl font-semibold text-gray-700 mb-4">PART A: PERSONAL INFORMATION</h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                <div class="flex flex-col items-center justify-center border border-dashed border-gray-400 rounded-md p-4 h-40 sm:h-48 bg-gray-50 text-gray-500">
-                                    <p class="text-sm text-center">Affix your most recent passport photograph here</p>
-                                    <div class="mt-2 text-xs">(Click to upload)</div>
-                                    <input type="file" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer" />
+                                <div class="flex flex-col items-center justify-center border border-dashed border-gray-400 rounded-md p-4 h-40 sm:h-48 bg-gray-50 text-gray-500 relative overflow-hidden">
+                                    <img id="passportPhotoPreview" src="${passportPhotoSrc}" alt="Passport Photo Preview" class="absolute inset-0 w-full h-full object-cover ${appState.formData.passportPhotoUrl ? '' : 'opacity-50'}" onerror="this.src='https://placehold.co/150x150/e0e0e0/555555?text=Passport+Photo';" />
+                                    <p class="text-sm text-center z-10 ${appState.formData.passportPhotoUrl ? 'hidden' : ''}">Affix your most recent passport photograph here</p>
+                                    <div class="mt-2 text-xs z-10 ${appState.formData.passportPhotoUrl ? 'hidden' : ''}">(Click to upload)</div>
+                                    <input type="file" id="passportPhotoInput" class="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-20" accept="image/*" />
                                 </div>
 
                                 <div class="grid grid-cols-1 gap-3">
                                     <div class="flex flex-col">
                                         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name:</label>
-                                        <input type="text" id="name" name="name" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="text" id="name" name="name" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="mobileNumbers" class="block text-sm font-medium text-gray-700 mb-1">Mobile Number(s):</label>
-                                        <input type="text" id="mobileNumbers" name="mobileNumbers" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="text" id="mobileNumbers" name="mobileNumbers" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="officeAPNumber" class="block text-sm font-medium text-gray-700 mb-1">Office/AP Number:</label>
-                                        <input type="text" id="officeAPNumber" name="officeAPNumber" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="text" id="officeAPNumber" name="officeAPNumber" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="ippisNumber" class="block text-sm font-medium text-gray-700 mb-1">IPPIS Number:</label>
-                                        <input type="text" id="ippisNumber" name="ippisNumber" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="text" id="ippisNumber" name="ippisNumber" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="employmentCode" class="block text-sm font-medium text-gray-700 mb-1">Employment Code:</label>
-                                        <input type="text" id="employmentCode" name="employmentCode" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="text" id="employmentCode" name="employmentCode" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="rank" class="block text-sm font-medium text-gray-700 mb-1">Rank:</label>
-                                        <input type="text" id="rank" name="rank" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="text" id="rank" name="rank" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                 </div>
 
                                 <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-4">
                                     <div class="flex flex-col">
                                         <label for="presentServicePoint" class="block text-sm font-medium text-gray-700 mb-1">Present Service Point:</label>
-                                        <input type="text" id="presentServicePoint" name="presentServicePoint" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="text" id="presentServicePoint" name="presentServicePoint" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="tiePoint" class="block text-sm font-medium text-gray-700 mb-1">Tie Point:</label>
-                                        <input type="text" id="tiePoint" name="tiePoint" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="text" id="tiePoint" name="tiePoint" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="dateOfEnrolment" class="block text-sm font-medium text-gray-700 mb-1">Date of Enrolment:</label>
-                                        <input type="date" id="dateOfEnrolment" name="dateOfEnrolment" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="date" id="dateOfEnrolment" name="dateOfEnrolment" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="serviceTerminalDate" class="block text-sm font-medium text-gray-700 mb-1">Service Terminal Date:</label>
-                                        <input type="date" id="serviceTerminalDate" name="serviceTerminalDate" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="date" id="serviceTerminalDate" name="serviceTerminalDate" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                 </div>
 
                                 <div class="md:col-span-2 space-y-4 mt-4">
                                     <div class="flex flex-col">
                                         <label for="presentMonthlySalary" class="block text-sm font-medium text-gray-700 mb-1">Present Monthly Salary:</label>
-                                        <input type="number" id="presentMonthlySalary" name="presentMonthlySalary" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="number" id="presentMonthlySalary" name="presentMonthlySalary" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="previousFinancialCommitments" class="block text-sm font-medium text-gray-700 mb-1">State details of previous financial commitment(s) and credit facility(s) obtained that you are still paying:</label>
@@ -481,7 +541,7 @@
                                     </div>
                                     <div class="flex flex-col">
                                         <label for="netMonthlySalary" class="block text-sm font-medium text-gray-700 mb-1">Net monthly salary:</label>
-                                        <input type="number" id="netMonthlySalary" name="netMonthlySalary" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                        <input type="number" id="netMonthlySalary" name="netMonthlySalary" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                     </div>
                                     <p class="text-xs text-gray-500 italic">
                                         (Note role that you cannot acquire asset(s) that the monthly repayment will be more than one-third of your net monthly salary)
@@ -506,29 +566,34 @@
                                             <th class="py-2 px-3 border-b border-gray-200">DETAILS OF PRODUCT(S)</th>
                                             <th class="py-2 px-3 border-b border-gray-200">ESTIMATED MONTHLY PAYMENT (N)</th>
                                             <th class="py-2 px-3 border-b border-gray-200">MONTHLY PAYMENT (N)</th>
+                                            <th class="py-2 px-3 border-b border-gray-200">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="productDetailsTableBody">
+                                        <!-- Product rows will be rendered here by JavaScript -->
                                     </tbody>
                                     <tfoot>
                                         <tr class="bg-gray-50">
                                             <td colspan="2" class="py-2 px-3 text-right font-semibold text-gray-700 text-sm">TOTAL (N)</td>
-                                            <td colspan="2" class="py-2 px-3 border-t border-gray-200">
+                                            <td colspan="3" class="py-2 px-3 border-t border-gray-200">
                                                 <input type="number" id="totalMonthlyPayment" class="w-full p-1 border border-gray-300 rounded-md text-sm font-semibold focus:ring-blue-500 focus:border-blue-500" placeholder="Total" readonly />
                                             </td>
                                         </tr>
                                     </tfoot>
                                 </table>
+                                <button type="button" id="addProductButton" class="mt-4 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300">
+                                    Add Product
+                                </button>
                             </div>
 
                             <div class="space-y-4">
                                 <div class="flex flex-col">
                                     <label for="totalCostOfAssets" class="block text-sm font-medium text-gray-700 mb-1">Total cost of asset(s) demanded: (Amount in words)</label>
-                                    <input type="text" id="totalCostOfAssets" name="totalCostOfAssets" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    <input type="text" id="totalCostOfAssets" name="totalCostOfAssets" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                 </div>
                                 <div class="flex flex-col">
                                     <label for="monthlyRepayment" class="block text-sm font-medium text-gray-700 mb-1">Monthly Repayment: (Amount in words)</label>
-                                    <input type="text" id="monthlyRepayment" name="monthlyRepayment" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" />
+                                    <input type="text" id="monthlyRepayment" name="monthlyRepayment" class="p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500" required />
                                 </div>
                             </div>
                         </div>
@@ -551,11 +616,11 @@
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-6 space-y-4 sm:space-y-0">
                                 <div class="flex-1 mr-0 sm:mr-4 w-full">
                                     <label for="applicantSignature" class="block text-sm font-medium text-gray-700 mb-1">Applicant's Signature:</label>
-                                    <input type="text" id="applicantSignature" name="applicantSignature" class="w-full p-2 border-b-2 border-gray-400 focus:border-blue-500 focus:outline-none text-sm" placeholder="Digital Signature Area" />
+                                    <input type="text" id="applicantSignature" name="applicantSignature" class="w-full p-2 border-b-2 border-gray-400 focus:border-blue-500 focus:outline-none text-sm" placeholder="Digital Signature Area" required />
                                 </div>
                                 <div class="flex-1 w-full">
                                     <label for="applicationDate" class="block text-sm font-medium text-gray-700 mb-1">Date:</label>
-                                    <input type="date" id="applicationDate" name="applicationDate" class="w-full p-2 border-b-2 border-gray-400 focus:border-blue-500 focus:outline-none text-sm" />
+                                    <input type="date" id="applicationDate" name="applicationDate" class="w-full p-2 border-b-2 border-gray-400 focus:border-blue-500 focus:outline-none text-sm" required />
                                 </div>
                             </div>
                         </div>
@@ -570,6 +635,7 @@
             `;
         }
 
+        // Renders the admin dashboard
         function renderAdminDashboard() {
             return `
                 <div class="bg-white shadow-lg rounded-lg p-6 sm:p-8 lg:p-10 max-w-4xl w-full my-8 border border-gray-200">
@@ -591,6 +657,7 @@
                                 </tr>
                             </thead>
                             <tbody id="applicationsTableBody">
+                                <!-- Applications will be rendered here by JavaScript -->
                             </tbody>
                         </table>
                     </div>
@@ -598,6 +665,7 @@
             `;
         }
 
+        // Loads applicant form data from Supabase
         async function loadApplicantFormData() {
             if (!supabase || !userId) {
                 console.error("Supabase or User ID not available. Cannot load data.");
@@ -610,7 +678,7 @@
                     .eq('user_id', userId)
                     .single();
 
-                if (error && error.code !== 'PGRST116') {
+                if (error && error.code !== 'PGRST116') { // PGRST116 means "No rows found"
                     throw error;
                 }
 
@@ -629,31 +697,35 @@
                         presentMonthlySalary: data.present_monthly_salary || null,
                         previousFinancialCommitments: data.previous_financial_commitments || '',
                         netMonthlySalary: data.net_monthly_salary || null,
-                        productDetails: data.product_details || Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' }),
+                        // Ensure productSelections is an array and has default structure
+                        productSelections: data.product_selections && Array.isArray(data.product_selections)
+                            ? data.product_selections
+                            : [{ productId: '', details: '', estimatedMonthlyPayment: 0, monthlyPayment: 0 }],
                         totalCostOfAssets: data.total_cost_of_assets || null,
                         monthlyRepayment: data.monthly_repayment || null,
                         status: data.status || 'pending',
                         applicantUid: data.user_id,
                         submissionDate: data.created_at ? new Date(data.created_at).toISOString() : '',
                         applicantSignature: data.applicant_signature || '',
-                        applicationDate: data.application_date || ''
+                        applicationDate: data.application_date || '',
+                        passportPhotoUrl: data.passport_photo_url || '' // Load passport photo URL
                     };
                     console.log("Form data loaded:", appState.formData);
                     updateFormFields();
-                    renderProductDetails();
+                    renderProductDetails(); // Re-render product details after loading
                     updateTotal();
                 } else {
-                    console.log("No existing form data found for this applicant.");
+                    console.log("No existing form data found for this applicant. Initializing with defaults.");
                     appState.formData = {
                         name: '', mobileNumbers: '', officeAPNumber: '', ippisNumber: '', employmentCode: '', rank: '',
                         presentServicePoint: '', tiePoint: '', dateOfEnrolment: '', serviceTerminalDate: '',
                         presentMonthlySalary: '', previousFinancialCommitments: '', netMonthlySalary: '',
-                        productDetails: Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' }),
+                        productSelections: [{ productId: '', details: '', estimatedMonthlyPayment: 0, monthlyPayment: 0 }],
                         totalCostOfAssets: '', monthlyRepayment: '', status: 'pending', applicantUid: userId, submissionDate: '',
-                        applicantSignature: '', applicationDate: ''
+                        applicantSignature: '', applicationDate: '', passportPhotoUrl: ''
                     };
                     updateFormFields();
-                    renderProductDetails();
+                    renderProductDetails(); // Re-render product details with defaults
                     updateTotal();
                 }
             } catch (e) {
@@ -662,86 +734,254 @@
             }
         }
 
+        // Updates general form fields based on appState.formData
         function updateFormFields() {
             for (const key in appState.formData) {
                 const element = document.getElementById(key);
                 if (element) {
-                    if (key === 'productDetails') {
+                    // Skip productSelections and passportPhotoUrl as they're handled by their respective render/event functions
+                    if (key === 'productSelections' || key === 'passportPhotoUrl') {
                         continue;
                     }
                     element.value = appState.formData[key];
                 }
             }
+            // Update the applicant name in the declaration section
             const applicantNameDeclaration = document.getElementById('applicantNameDeclaration');
             if (applicantNameDeclaration) {
                 applicantNameDeclaration.textContent = appState.formData.name || '';
             }
+            // Update the passport photo preview
+            const passportPhotoPreview = document.getElementById('passportPhotoPreview');
+            if (passportPhotoPreview) {
+                passportPhotoPreview.src = appState.formData.passportPhotoUrl || 'https://placehold.co/150x150/e0e0e0/555555?text=Passport+Photo';
+                if (appState.formData.passportPhotoUrl) {
+                    passportPhotoPreview.classList.remove('opacity-50');
+                } else {
+                    passportPhotoPreview.classList.add('opacity-50');
+                }
+                // Hide placeholder text if image is present
+                const placeholderText = passportPhotoPreview.nextElementSibling; // This is the <p> tag
+                const placeholderSubText = placeholderText ? placeholderText.nextElementSibling : null; // This is the <div> tag
+                if (placeholderText) {
+                    placeholderText.classList.toggle('hidden', !!appState.formData.passportPhotoUrl);
+                }
+                if (placeholderSubText) {
+                    placeholderSubText.classList.toggle('hidden', !!appState.formData.passportPhotoUrl);
+                }
+            }
         }
 
+        // Handles passport photo upload
+        async function handlePassportPhotoUpload(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            // Client-side validation: Check if the file is an image
+            if (!file.type.startsWith('image/')) {
+                showModal('Invalid File Type', 'Please upload an image file (e.g., JPG, PNG, GIF).');
+                e.target.value = ''; // Clear the file input
+                return;
+            }
+
+            if (!supabase || !userId) {
+                showModal('Error', 'Authentication required to upload photo.', 'Please log in.');
+                return;
+            }
+
+            console.log("Attempting to upload passport photo...");
+            console.log("Current userId:", userId);
+            const fileName = `${userId}_${Date.now()}_${file.name}`;
+            const filePath = `passport_photos/${userId}/${fileName}`;
+            console.log("Calculated filePath for upload:", filePath);
+
+
+            try {
+                const { data, error } = await supabase.storage
+                    .from('passport-photos') // Ensure you have a bucket named 'passport-photos' in Supabase Storage
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (error) {
+                    console.error("Supabase Storage Upload Error:", error); // Log the full error object
+                    if (error.statusCode === '409') { // Conflict, file already exists
+                        showModal('Upload Error', 'A file with this name already exists. Please rename your file or try again.');
+                    } else {
+                        throw error;
+                    }
+                }
+
+                const { data: publicUrlData } = supabase.storage
+                    .from('passport-photos')
+                    .getPublicUrl(filePath);
+
+                if (publicUrlData && publicUrlData.publicUrl) {
+                    appState.formData.passportPhotoUrl = publicUrlData.publicUrl;
+                    console.log("Passport photo uploaded successfully. Public URL:", appState.formData.passportPhotoUrl);
+                    updateFormFields(); // Update the preview image
+                    saveApplicantFormData(); // Save the new URL to the database
+                    showModal('Success', 'Passport photo uploaded successfully!');
+                } else {
+                    showModal('Upload Error', 'Failed to get public URL for the uploaded photo.');
+                }
+
+            } catch (error) {
+                console.error("Error during passport photo upload process:", error); // Log the full error object
+                showModal('Upload Failed', 'Could not upload passport photo.', error.message);
+            }
+        }
+
+
+        // Renders or re-renders the product details table
         function renderProductDetails() {
             const productDetailsTableBody = document.getElementById('productDetailsTableBody');
             if (!productDetailsTableBody) return;
 
-            productDetailsTableBody.innerHTML = '';
+            productDetailsTableBody.innerHTML = ''; // Clear existing rows
 
-            const productDetailsArray = Array.isArray(appState.formData.productDetails)
-                ? appState.formData.productDetails
-                : Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' });
+            // Ensure productSelections is an array
+            const productSelectionsArray = Array.isArray(appState.formData.productSelections)
+                ? appState.formData.productSelections
+                : [];
 
-            productDetailsArray.forEach((product, index) => {
+            productSelectionsArray.forEach((selection, index) => {
                 const row = productDetailsTableBody.insertRow();
                 row.className = 'hover:bg-gray-50';
 
+                // S/N Cell
                 const snCell = row.insertCell();
                 snCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
                 snCell.textContent = index + 1;
 
+                // Product Details (Dropdown) Cell
                 const detailsCell = row.insertCell();
                 detailsCell.className = 'py-2 px-3 border-b border-gray-200';
-                const detailsInput = document.createElement('input');
-                detailsInput.type = 'text';
-                detailsInput.className = 'w-full p-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500';
-                detailsInput.value = product.details || '';
-                detailsInput.dataset.index = index;
-                detailsInput.dataset.field = 'details';
-                detailsInput.addEventListener('input', handleProductChange);
-                detailsCell.appendChild(detailsInput);
+                const selectElement = document.createElement('select');
+                selectElement.className = 'w-full p-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500';
+                selectElement.dataset.index = index;
+                selectElement.dataset.field = 'productId';
+                selectElement.addEventListener('change', handleProductSelectionChange);
 
+                // Default "Select a product" option
+                let defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select a product';
+                selectElement.appendChild(defaultOption);
+
+                // Populate dropdown with PRODUCTS
+                PRODUCTS.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = `${product.name} (N${product.monthlyRepayment.toLocaleString()}/month)`;
+                    selectElement.appendChild(option);
+                });
+                selectElement.value = selection.productId || ''; // Set selected value
+                selectElement.required = true; // Make product selection required
+
+                detailsCell.appendChild(selectElement);
+
+                // Estimated Monthly Payment (Read-only) Cell
                 const estimatedMonthlyPaymentCell = row.insertCell();
                 estimatedMonthlyPaymentCell.className = 'py-2 px-3 border-b border-gray-200';
                 const estimatedMonthlyPaymentInput = document.createElement('input');
                 estimatedMonthlyPaymentInput.type = 'number';
-                estimatedMonthlyPaymentInput.className = 'w-full p-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500';
-                estimatedMonthlyPaymentInput.value = product.estimatedMonthlyPayment || '';
-                estimatedMonthlyPaymentInput.dataset.index = index;
-                estimatedMonthlyPaymentInput.dataset.field = 'estimatedMonthlyPayment';
-                estimatedMonthlyPaymentInput.addEventListener('input', handleProductChange);
+                estimatedMonthlyPaymentInput.className = 'w-full p-1 border border-gray-300 rounded-md text-sm bg-gray-50';
+                estimatedMonthlyPaymentInput.value = selection.estimatedMonthlyPayment || '';
+                estimatedMonthlyPaymentInput.readOnly = true;
+                estimatedMonthlyPaymentInput.tabIndex = -1; // Make it not focusable
                 estimatedMonthlyPaymentCell.appendChild(estimatedMonthlyPaymentInput);
 
+                // Monthly Payment (Read-only) Cell
                 const monthlyPaymentCell = row.insertCell();
                 monthlyPaymentCell.className = 'py-2 px-3 border-b border-gray-200';
                 const monthlyPaymentInput = document.createElement('input');
                 monthlyPaymentInput.type = 'number';
-                monthlyPaymentInput.className = 'w-full p-1 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500';
-                monthlyPaymentInput.value = product.monthlyPayment || '';
-                monthlyPaymentInput.dataset.index = index;
-                monthlyPaymentInput.dataset.field = 'monthlyPayment';
-                monthlyPaymentInput.addEventListener('input', handleProductChange);
+                monthlyPaymentInput.className = 'w-full p-1 border border-gray-300 rounded-md text-sm bg-gray-50';
+                monthlyPaymentInput.value = selection.monthlyPayment || '';
+                monthlyPaymentInput.readOnly = true;
+                monthlyPaymentInput.tabIndex = -1; // Make it not focusable
                 monthlyPaymentCell.appendChild(monthlyPaymentInput);
+
+                // Actions Cell (Remove Button)
+                const actionsCell = row.insertCell();
+                actionsCell.className = 'py-2 px-3 border-b border-gray-200 text-center';
+                const removeButton = document.createElement('button');
+                removeButton.textContent = 'Remove';
+                removeButton.className = 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs';
+                removeButton.addEventListener('click', () => removeProductSelectionRow(index));
+                actionsCell.appendChild(removeButton);
             });
         }
 
+        // Adds a new empty product selection row to the form
+        function addProductSelectionRow() {
+            // Limit to 5 products
+            if (appState.formData.productSelections.length < 5) {
+                appState.formData.productSelections.push({ productId: '', details: '', estimatedMonthlyPayment: 0, monthlyPayment: 0 });
+                renderProductDetails();
+                saveApplicantFormData();
+            } else {
+                showModal('Limit Reached', 'You can add a maximum of 5 products.');
+            }
+        }
+
+        // Handles changes in the product selection dropdown
+        function handleProductSelectionChange(e) {
+            const index = parseInt(e.target.dataset.index);
+            const productId = e.target.value;
+
+            const selectedProduct = PRODUCTS.find(p => p.id === productId);
+
+            if (selectedProduct) {
+                appState.formData.productSelections[index] = {
+                    productId: selectedProduct.id,
+                    details: selectedProduct.name,
+                    estimatedMonthlyPayment: selectedProduct.installment18Months,
+                    monthlyPayment: selectedProduct.monthlyRepayment
+                };
+            } else {
+                // If no product selected (e.g., "Select a product" option)
+                appState.formData.productSelections[index] = {
+                    productId: '',
+                    details: '',
+                    estimatedMonthlyPayment: 0,
+                    monthlyPayment: 0
+                };
+            }
+            updateTotal();
+            saveApplicantFormData();
+            renderProductDetails(); // Re-render to update displayed values
+        }
+
+        // Removes a product selection row
+        function removeProductSelectionRow(index) {
+            if (appState.formData.productSelections.length > 1) { // Ensure at least one row remains
+                appState.formData.productSelections.splice(index, 1);
+                renderProductDetails();
+                updateTotal();
+                saveApplicantFormData();
+            } else {
+                showModal('Cannot Remove', 'You must have at least one product selection row.');
+            }
+        }
+
+        // Calculates and updates the total monthly payment
         function updateTotal() {
             const totalMonthlyPaymentInput = document.getElementById('totalMonthlyPayment');
             if (!totalMonthlyPaymentInput) return;
 
-            const total = (Array.isArray(appState.formData.productDetails) ? appState.formData.productDetails : []).reduce((sum, product) => {
-                const monthlyPayment = parseFloat(product.monthlyPayment) || 0;
+            const total = (Array.isArray(appState.formData.productSelections) ? appState.formData.productSelections : []).reduce((sum, selection) => {
+                const monthlyPayment = parseFloat(selection.monthlyPayment) || 0;
                 return sum + monthlyPayment;
             }, 0);
             totalMonthlyPaymentInput.value = total.toFixed(2);
         }
 
+        // Handles changes for general form fields (not product selections)
         function handleChange(e) {
             const { name, value } = e.target;
             appState.formData[name] = value;
@@ -755,26 +995,7 @@
             saveApplicantFormData();
         }
 
-        function handleProductChange(e) {
-            const { dataset, value } = e.target;
-            const index = parseInt(dataset.index);
-            const field = dataset.field;
-
-            if (!Array.isArray(appState.formData.productDetails)) {
-                appState.formData.productDetails = Array(5).fill({ sn: '', details: '', estimatedMonthlyPayment: '', monthlyPayment: '' });
-            }
-
-            const newProductDetails = [...appState.formData.productDetails];
-            newProductDetails[index] = {
-                ...newProductDetails[index],
-                [field]: value,
-            };
-            appState.formData.productDetails = newProductDetails;
-
-            updateTotal();
-            saveApplicantFormData();
-        }
-
+        // Saves applicant form data to Supabase
         async function saveApplicantFormData() {
             if (!supabase || !userId) {
                 console.error("Supabase or User ID not available. Cannot save data.");
@@ -797,11 +1018,13 @@
                     present_monthly_salary: parseFloat(appState.formData.presentMonthlySalary) || null,
                     previous_financial_commitments: appState.formData.previousFinancialCommitments,
                     net_monthly_salary: parseFloat(appState.formData.netMonthlySalary) || null,
-                    product_details: appState.formData.productDetails,
+                    // Save productSelections instead of productDetails
+                    product_selections: appState.formData.productSelections,
                     total_cost_of_assets: parseFloat(appState.formData.totalCostOfAssets) || null,
                     monthly_repayment: parseFloat(appState.formData.monthlyRepayment) || null,
                     applicant_signature: appState.formData.applicantSignature,
-                    application_date: appState.formData.applicationDate
+                    application_date: appState.formData.applicationDate,
+                    passport_photo_url: appState.formData.passportPhotoUrl // Save passport photo URL
                 };
 
                 const { data: updateData, error: updateError } = await supabase
@@ -809,7 +1032,7 @@
                     .update(dataToSave)
                     .eq('user_id', userId);
 
-                if (updateError && updateData === null) {
+                if (updateError && updateError.code === 'PGRST116') { // PGRST116 means "No rows found"
                     console.log("No existing record found for user_id, attempting to insert.");
                     const { data: insertData, error: insertError } = await supabase
                         .from('applications')
@@ -827,6 +1050,7 @@
             }
         }
 
+        // Handles form submission
         async function handleSubmit(e) {
             e.preventDefault();
             console.log('Form Data Submitted:', appState.formData);
@@ -834,6 +1058,7 @@
             showModal('Form Submitted!', 'Your application has been received. Thank you!', 'Check the browser console for the submitted form data (for demonstration purposes).');
         }
 
+        // Fetches all applications for the admin dashboard
         async function fetchApplications() {
             if (!supabase) {
                 console.error("Supabase not available. Cannot fetch applications.");
@@ -849,7 +1074,7 @@
                 appState.applications = data;
                 console.log("Applications fetched for admin:", appState.applications);
                 if (appState.currentView === 'adminDashboard') {
-                    renderApp();
+                    renderApp(); // Re-render admin dashboard to show updated applications
                 }
             } catch (error) {
                 console.error("Error fetching applications:", error);
@@ -857,6 +1082,7 @@
             }
         }
 
+        // Renders the applications table in the admin dashboard
         function renderApplications() {
             const applicationsTableBody = document.getElementById('applicationsTableBody');
             if (!applicationsTableBody) return;
@@ -882,11 +1108,11 @@
 
                 const totalCostCell = row.insertCell();
                 totalCostCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
-                totalCostCell.textContent = app.total_cost_of_assets || 'N/A';
+                totalCostCell.textContent = app.total_cost_of_assets ? `N${app.total_cost_of_assets.toLocaleString()}` : 'N/A';
 
                 const statusCell = row.insertCell();
                 statusCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
-                statusCell.innerHTML = `<span class="px-2 py-1 rounded-full text-xs font-semibold ${app.status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${app.status ? app.status.toUpperCase() : 'N/A'}</span>`;
+                statusCell.innerHTML = `<span class="px-2 py-1 rounded-full text-xs font-semibold ${app.status === 'approved' ? 'bg-green-100 text-green-800' : app.status === 'declined' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}">${app.status ? app.status.toUpperCase() : 'N/A'}</span>`;
 
                 const actionsCell = row.insertCell();
                 actionsCell.className = 'py-2 px-3 border-b border-gray-200 text-sm';
@@ -896,6 +1122,12 @@
                     approveButton.className = 'px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 text-xs mr-2';
                     approveButton.addEventListener('click', () => updateApplicationStatus(app.user_id, 'approved'));
                     actionsCell.appendChild(approveButton);
+
+                    const declineButton = document.createElement('button');
+                    declineButton.textContent = 'Decline';
+                    declineButton.className = 'px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 text-xs';
+                    declineButton.addEventListener('click', () => updateApplicationStatus(app.user_id, 'declined'));
+                    actionsCell.appendChild(declineButton);
                 } else {
                     actionsCell.textContent = 'No actions';
                     actionsCell.className += ' text-gray-500 italic';
@@ -903,6 +1135,7 @@
             });
         }
 
+        // Updates the status of an application
         async function updateApplicationStatus(applicantUid, newStatus) {
             if (!supabase) {
                 console.error("Supabase not available.");
@@ -916,13 +1149,14 @@
 
                 if (error) throw error;
                 showModal('Success', `Application for ${applicantUid} ${newStatus}!`);
-                await fetchApplications();
+                await fetchApplications(); // Re-fetch applications to update dashboard
             } catch (error) {
                 console.error("Error updating application status:", error);
                 showModal('Error', 'Failed to update application status.', error.message);
             }
         }
 
+        // Signs out the current user
         async function signOutUser() {
             try {
                 const { error } = await supabase.auth.signOut();
@@ -934,7 +1168,9 @@
             }
         }
 
+        // Event listener for DOM content loaded
         document.addEventListener('DOMContentLoaded', () => {
+            // Setup modal close buttons
             document.getElementById('closeModalButton').addEventListener('click', hideModal);
             document.getElementById('appModal').addEventListener('click', (e) => {
                 if (e.target.id === 'appModal') {
